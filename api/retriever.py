@@ -5,7 +5,6 @@ Hybrid retriever — searches Qdrant for relevant chunks.
 import logging
 import numpy as np
 from qdrant_client import QdrantClient
-from qdrant_client.models import SearchRequest
 
 from ingest.embedder import Embedder
 
@@ -27,15 +26,15 @@ class Retriever:
         """
         query_vector = self.embedder.embed_query(query)
 
-        results = self.client.search(
+        results = self.client.query_points(
             collection_name=self.collection,
-            query_vector=query_vector.tolist(),
+            query=query_vector.tolist(),
             limit=top_k,
             with_payload=True,
         )
 
         chunks = []
-        for hit in results:
+        for hit in results.points:
             payload = hit.payload or {}
             chunks.append({
                 "text": payload.get("text", ""),
