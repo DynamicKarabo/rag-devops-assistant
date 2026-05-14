@@ -1,23 +1,35 @@
-# Multi-stage Dockerfile — builder + runtime
-# Uses distroless-style slim base for minimal attack surface
+# Multi-stage Dockerfile
+# Stage 1: build deps + pre-download embedding model
+# Stage 2: slim runtime
 
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
-COPY pyproject.toml .
+# Install all runtime deps
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir hatchling \
-    && pip install --no-cache-dir $(hatchling metadata | grep -A100 'Requires-Dist:' | sed 's/Requires-Dist: //' | tr '\n' ' ') \
-    && pip uninstall -y hatchling
+    && pip install --no-cache-dir \
+        fastapi>=0.133.0 \
+        "uvicorn[standard]>=0.41.0" \
+        qdrant-client>=1.14.0 \
+        sentence-transformers>=3.0.0 \
+        openai>=2.24.0 \
+        langchain-text-splitters>=0.3.0 \
+        httpx>=0.28.0 \
+        prometheus-fastapi-instrumentator>=7.1.0 \
+        opentelemetry-api>=1.30.0 \
+        opentelemetry-sdk>=1.30.0 \
+        opentelemetry-instrumentation-fastapi>=0.51b0 \
+        opentelemetry-exporter-otlp>=1.30.0 \
+        pydantic>=2.0.0 \
+        python-dotenv>=1.0.0 \
+    && pip cache purge
 
-# Pre-download embedding model (cached in image)
+# Pre-download embedding model
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # ---- runtime ----
@@ -25,7 +37,7 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Copy site-packages from builder
+# Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
