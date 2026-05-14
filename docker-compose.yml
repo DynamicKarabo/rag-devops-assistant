@@ -1,0 +1,79 @@
+# ── RAG DevOps Assistant ──
+# docker compose up -d  →  starts Qdrant + API + ingest job
+# docker compose down   →  tears everything down
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.14.0
+    container_name: rag-qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: "6334"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - rag-net
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder   # use builder for one-off jobs
+    container_name: rag-ingest
+    command: python -m ingest.pipeline --source k8s --source docker --source terraform
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: devops_docs
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - rag-net
+    profiles:
+      - ingest   # only runs with --profile ingest
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: devops_docs
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - rag-net
+
+volumes:
+  qdrant_data:
+
+networks:
+  rag-net:
+    driver: bridge
