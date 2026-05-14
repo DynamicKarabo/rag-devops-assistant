@@ -1,0 +1,91 @@
+# ── RAG API in k3s ──
+# FastAPI service for DevOps documentation Q&A
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-api-config
+  namespace: mlops
+data:
+  QDRANT_URL: "http://178.105.76.236:6333"
+  QDRANT_COLLECTION: "devops_docs"
+  LLM_MODEL: "openai/gpt-4o-mini"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rag-api-secrets
+  namespace: mlops
+type: Opaque
+stringData:
+  OPENROUTER_API_KEY: "PLACEHOLDER"  # Replace with real key
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-api
+  namespace: mlops
+  labels:
+    app: rag-api
+spec:
+  selector:
+    app: rag-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-api
+  namespace: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-api
+  template:
+    metadata:
+      labels:
+        app: rag-api
+        prometheus-scrape: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: rag-api
+          image: ghcr.io/dynamickarabo/rag-devops-assistant:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: rag-api-config
+            - secretRef:
+                name: rag-api-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
