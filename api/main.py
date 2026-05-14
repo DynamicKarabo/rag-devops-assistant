@@ -30,31 +30,47 @@ LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
 embedder: Embedder | None = None
 retriever: Retriever | None = None
 generator: Generator | None = None
+_ready: bool = False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load models on startup, clean up on shutdown."""
-    global embedder, retriever, generator
+    global embedder, retriever, generator, _ready
 
     logger.info("Starting RAG DevOps Assistant...")
     logger.info(f"Qdrant: {QDRANT_URL} / {QDRANT_COLLECTION}")
     logger.info(f"LLM: {LLM_MODEL}")
 
-    embedder = Embedder()
-    retriever = Retriever(QDRANT_URL, QDRANT_COLLECTION, embedder)
-    generator = Generator(model=LLM_MODEL)
-
-    # Verify Qdrant connection
     try:
-        info = retriever.client.get_collection(QDRANT_COLLECTION)
-        logger.info(f"Connected to Qdrant: {info.points_count} points in {QDRANT_COLLECTION}")
+        logger.info("Loading embedding model...")
+        embedder = Embedder()
+        logger.info("Embedding model loaded.")
+
+        logger.info("Initializing retriever...")
+        retriever = Retriever(QDRANT_URL, QDRANT_COLLECTION, embedder)
+
+        logger.info("Initializing generator...")
+        generator = Generator(model=LLM_MODEL)
+        logger.info("Generator initialized.")
+
+        # Verify Qdrant connection (non-blocking, quick check)
+        try:
+            info = retriever.client.get_collection(QDRANT_COLLECTION)
+            logger.info(f"Connected to Qdrant: {info.points_count} points in {QDRANT_COLLECTION}")
+        except Exception as e:
+            logger.warning(f"Qdrant connection check failed (ingest first?): {e}")
+
+        _ready = True
+        logger.info("RAG API ready.")
     except Exception as e:
-        logger.warning(f"Qdrant connection failed (ingest first?): {e}")
+        logger.error(f"Startup failed: {e}")
+        # Don't block — allow /health to report not-ready
 
     yield
 
     logger.info("Shutting down.")
+    _ready = False
 
 
 app = FastAPI(
@@ -74,12 +90,12 @@ async def health():
     if retriever:
         try:
             info = retriever.client.get_collection(QDRANT_COLLECTION)
-            qdrant_points = info.points_count
+            qdrant_points = info.points_count or 0
         except Exception:
             pass
 
     return HealthResponse(
-        status="ok",
+        status="ok" if _ready else "starting",
         qdrant_points=qdrant_points,
         model_loaded=embedder is not None,
         version="0.1.0",
@@ -94,8 +110,8 @@ async def query(req: QueryRequest):
     2. Generate answer with LLM
     3. Return answer + citations
     """
-    if not retriever or not generator:
-        raise HTTPException(status_code=503, detail="Service not ready — models not loaded")
+    if not _ready or not retriever or not generator:
+        raise HTTPException(status_code=503, detail="Service not ready — models still loading")
 
     t0 = time.monotonic()
 
