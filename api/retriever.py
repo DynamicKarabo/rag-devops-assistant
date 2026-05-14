@@ -3,7 +3,6 @@ Hybrid retriever — searches Qdrant for relevant chunks.
 """
 
 import logging
-import numpy as np
 from qdrant_client import QdrantClient
 
 from ingest.embedder import Embedder

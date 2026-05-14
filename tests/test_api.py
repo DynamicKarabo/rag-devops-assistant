@@ -1,7 +1,6 @@
 """Tests for the RAG API."""
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 def test_health_check():

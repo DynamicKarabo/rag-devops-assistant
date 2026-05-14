@@ -5,7 +5,6 @@ Uses BFS with link extraction to recursively discover pages.
 
 import logging
 import asyncio
-import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 from typing import Optional

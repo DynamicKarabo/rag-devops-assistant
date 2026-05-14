@@ -10,7 +10,6 @@ from qdrant_client.models import (
     Distance,
     VectorParams,
     PointStruct,
-    SparseVectorParams,
 )
 
 logger = logging.getLogger(__name__)
