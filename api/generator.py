@@ -87,4 +87,5 @@ Answer (cite sources with [N] notation):"""
             "answer": choice.message.content or "",
             "tokens_used": tokens,
             "model": response.model or self.model,
+            "llm_latency_s": elapsed,
         }

@@ -61,7 +61,7 @@ spec:
       containers:
         - name: rag-api
           image: ghcr.io/dynamickarabo/rag-devops-assistant:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
               name: http

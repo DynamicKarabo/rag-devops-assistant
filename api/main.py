@@ -15,6 +15,11 @@ from api.models import QueryRequest, QueryResponse, SourceCitation, HealthRespon
 from api.retriever import Retriever
 from api.generator import Generator
 from api.middleware import setup_observability
+from api.metrics import (
+    rag_query_latency, rag_retrieval_latency, rag_llm_latency,
+    rag_tokens_total, rag_sources_per_query, rag_cost_total,
+    rag_qdrant_points, rag_qdrant_up, rag_errors_total,
+)
 from ingest.embedder import Embedder
 
 load_dotenv()
@@ -86,13 +91,19 @@ setup_observability(app)
 @app.get("/health", response_model=HealthResponse)
 async def health():
     """Health check — verifies Qdrant connectivity and model state."""
+    # ── Health check with Qdrant metrics ──
     qdrant_points = 0
+    qdrant_ok = False
     if retriever:
         try:
             info = retriever.client.get_collection(QDRANT_COLLECTION)
             qdrant_points = info.points_count or 0
+            qdrant_ok = True
         except Exception:
             pass
+
+    rag_qdrant_points.set(qdrant_points)
+    rag_qdrant_up.set(1 if qdrant_ok else 0)
 
     return HealthResponse(
         status="ok" if _ready else "starting",
@@ -111,17 +122,21 @@ async def query(req: QueryRequest):
     3. Return answer + citations
     """
     if not _ready or not retriever or not generator:
+        rag_errors_total.labels(error_type="503_not_ready").inc()
         raise HTTPException(status_code=503, detail="Service not ready — models still loading")
 
     t0 = time.monotonic()
 
-    # Retrieve
+    # ── Retrieve (with timing) ──
+    t_retrieve = time.monotonic()
     chunks = retriever.search(req.question, top_k=req.top_k)
+    retrieval_ms = (time.monotonic() - t_retrieve) * 1000
+    rag_retrieval_latency.observe(retrieval_ms / 1000)
 
-    # Generate
+    # ── Generate (LLM call) ──
     result = generator.generate(req.question, chunks)
 
-    # Build sources
+    # ── Build sources ──
     sources = []
     if req.include_sources:
         for chunk in chunks:
@@ -133,7 +148,26 @@ async def query(req: QueryRequest):
 
     latency_ms = (time.monotonic() - t0) * 1000
 
-    logger.info(f"Query complete: {latency_ms:.1f}ms, {result['tokens_used']} tokens, {len(sources)} sources")
+    # ── Record metrics ──
+    rag_query_latency.observe(latency_ms / 1000)
+    rag_retrieval_latency.observe(retrieval_ms / 1000)
+    llm_s = result.get("llm_latency_s", 0)
+    if llm_s > 0:
+        rag_llm_latency.observe(llm_s)
+    rag_sources_per_query.observe(len(sources))
+    tokens = result.get("tokens_used", 0)
+    if tokens > 0:
+        rag_tokens_total.inc(tokens)
+
+    # Cost estimation: ~$0.0005/1K tokens for free-tier inference
+    if tokens > 0:
+        cost = tokens * 0.0000005
+        rag_cost_total.inc(cost)
+
+    if result["answer"].startswith("Error"):
+        rag_errors_total.labels(error_type="llm_error").inc()
+
+    logger.info(f"Query complete: {latency_ms:.1f}ms, {tokens} tokens, {len(sources)} sources")
 
     return QueryResponse(
         question=req.question,
