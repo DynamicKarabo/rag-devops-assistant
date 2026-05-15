@@ -70,3 +70,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  eval:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install eval dependencies
+        run: pip install httpx sentence-transformers
+
+      - name: Run retrieval evaluation
+        env:
+          RAG_API_URL: ${{ vars.RAG_API_URL || 'https://rag-api.example.com' }}
+        run: python eval/run_eval.py

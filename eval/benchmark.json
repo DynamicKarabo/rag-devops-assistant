@@ -1,0 +1,107 @@
+{
+  "description": "RAG DevOps Assistant evaluation benchmark — 20 questions with ground truth answers",
+  "version": "1.0.0",
+  "domain": "DevOps documentation (Kubernetes, Docker, Terraform)",
+  "items": [
+    {
+      "id": "q01",
+      "question": "How do I create a Kubernetes Deployment?",
+      "ground_truth": "Use kubectl create deployment or define a Deployment YAML manifest with apiVersion apps/v1, kind Deployment, and specify replicas, selector, and pod template. Apply with kubectl apply -f deployment.yaml."
+    },
+    {
+      "id": "q02",
+      "question": "What is a Docker image and how do I build one?",
+      "ground_truth": "A Docker image is a read-only template with instructions for creating a container. Build one using docker build -t name:tag . with a Dockerfile that specifies the base image, dependencies, and runtime commands."
+    },
+    {
+      "id": "q03",
+      "question": "How does Terraform manage infrastructure state?",
+      "ground_truth": "Terraform stores state in a state file (terraform.tfstate) that maps resources in configuration to real-world resources. State can be stored locally or remotely (S3, Terraform Cloud) and supports locking to prevent concurrent modifications."
+    },
+    {
+      "id": "q04",
+      "question": "What is a Kubernetes Service and what types exist?",
+      "ground_truth": "A Kubernetes Service exposes pods to network traffic. Types include ClusterIP (internal only), NodePort (exposes on node IP at a static port), LoadBalancer (provisions external load balancer), and ExternalName (DNS CNAME mapping)."
+    },
+    {
+      "id": "q05",
+      "question": "How do I set environment variables in a Docker container?",
+      "ground_truth": "Use the -e flag with docker run (e.g., docker run -e MY_VAR=value image), or specify them in a Dockerfile with the ENV instruction, or use an env-file with --env-file flag."
+    },
+    {
+      "id": "q06",
+      "question": "What are Terraform providers and how do I configure them?",
+      "ground_truth": "Terraform providers are plugins that interact with cloud APIs (AWS, GCP, Azure) or other services. Configure them in a required_providers block with source and version, and optionally a provider block for authentication settings like region and credentials."
+    },
+    {
+      "id": "q07",
+      "question": "How do Kubernetes health checks work?",
+      "ground_truth": "Kubernetes supports liveness probes (restart container if unhealthy), readiness probes (stop sending traffic if not ready), and startup probes (delay liveness/readiness during startup). Probes can use HTTP GET, TCP socket, or exec commands."
+    },
+    {
+      "id": "q08",
+      "question": "What is the difference between Docker Compose and Docker Swarm?",
+      "ground_truth": "Docker Compose defines and runs multi-container applications on a single host using a YAML file. Docker Swarm is a container orchestration tool for clustering multiple Docker hosts, providing service discovery, load balancing, and scaling across nodes."
+    },
+    {
+      "id": "q09",
+      "question": "How do I manage secrets in Kubernetes?",
+      "ground_truth": "Kubernetes Secrets store sensitive data like passwords and API keys. Create them with kubectl create secret generic, or from files (--from-file) or literals (--from-literal). Secrets are base64-encoded and can be mounted as volumes or exposed as environment variables."
+    },
+    {
+      "id": "q10",
+      "question": "What is Terraform's plan command and why use it?",
+      "ground_truth": "terraform plan creates an execution plan showing what changes Terraform will make to infrastructure before applying them. It's used to preview changes, catch errors, and review modifications with team members before execution."
+    },
+    {
+      "id": "q11",
+      "question": "How do I set up persistent storage in Docker?",
+      "ground_truth": "Use Docker volumes (docker volume create) or bind mounts (-v host:container). Volumes are managed by Docker and stored in /var/lib/docker/volumes. Bind mounts map a host directory directly. Named volumes are preferred for data persistence."
+    },
+    {
+      "id": "q12",
+      "question": "What are Kubernetes namespaces and why use them?",
+      "ground_truth": "Namespaces partition cluster resources between multiple users, teams, or applications. They provide scope for names, resource quotas, and access control. Common namespaces include default, kube-system, and kube-public."
+    },
+    {
+      "id": "q13",
+      "question": "How do Docker networks work?",
+      "ground_truth": "Docker networks enable container communication. Default drivers are bridge (single-host private network), host (use host networking directly), overlay (multi-host), and none (disable networking). Containers on the same bridge network can communicate by name."
+    },
+    {
+      "id": "q14",
+      "question": "How do I use Terraform modules?",
+      "ground_truth": "Terraform modules are reusable configuration packages. Use a module block with source pointing to a local path or registry (e.g., source = 'terraform-aws-modules/vpc/aws'). Pass input variables and reference outputs for composition."
+    },
+    {
+      "id": "q15",
+      "question": "What is a Kubernetes ConfigMap?",
+      "ground_truth": "A ConfigMap stores non-sensitive configuration data as key-value pairs. Create with kubectl create configmap, reference in pods as environment variables, command-line arguments, or mounted volumes. They decouple configuration from application code."
+    },
+    {
+      "id": "q16",
+      "question": "How do I optimize Docker image size?",
+      "ground_truth": "Use multi-stage builds to separate build and runtime dependencies. Choose minimal base images (alpine, distroless). Combine RUN commands to reduce layers. Use .dockerignore to exclude unnecessary files. Clean package caches in the same layer."
+    },
+    {
+      "id": "q17",
+      "question": "What is Terraform state locking and how does it work?",
+      "ground_truth": "Terraform state locking prevents concurrent operations on the same state file. When using remote backends like S3 with DynamoDB, Terraform acquires a lock before operations and releases it after. This prevents state corruption from parallel terraform apply commands."
+    },
+    {
+      "id": "q18",
+      "question": "How do I expose a Kubernetes application externally?",
+      "ground_truth": "Use a Service of type LoadBalancer for cloud providers, type NodePort for on-premises, or an Ingress resource for HTTP routing with TLS. Ingress controllers like nginx-ingress handle routing rules and SSL termination."
+    },
+    {
+      "id": "q19",
+      "question": "What are Docker multi-stage builds?",
+      "ground_truth": "Multi-stage builds use multiple FROM statements in a single Dockerfile. Each stage can use a different base image. Build artifacts from one stage can be copied to later stages using COPY --from=stage, resulting in a smaller final image without build tools."
+    },
+    {
+      "id": "q20",
+      "question": "How do I handle Terraform provider versioning?",
+      "ground_truth": "Specify provider versions in the required_providers block with version constraints (~> for minor, >= for minimum). Use terraform.lock.hcl to lock provider versions. Run terraform init -upgrade to update to the latest compatible versions."
+    }
+  ]
+}
