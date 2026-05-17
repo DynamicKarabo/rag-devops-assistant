@@ -2,6 +2,8 @@
 
 **Production RAG system for Kubernetes, Docker, and Terraform documentation. Observability-first, evaluation-gated, and self-hosted.**
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repo-181717?logo=github)](https://github.com/DynamicKarabo/rag-devops-assistant)
+[![Last commit](https://img.shields.io/github/last-commit/DynamicKarabo/rag-devops-assistant/main)](https://github.com/DynamicKarabo/rag-devops-assistant)
 [![CI](https://github.com/DynamicKarabo/rag-devops-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/DynamicKarabo/rag-devops-assistant/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue?logo=python)](https://python.org)
 [![Docker](https://img.shields.io/badge/docker-multi--stage-2496ED?logo=docker)](https://docker.com)
